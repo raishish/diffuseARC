@@ -1,10 +1,5 @@
-# diffuseARC
-Discrete Diffusion for ARC-AGI
+# diffuseARC: Discrete Diffusion for ARC-AGI
 
-# Directory Structure
-- [llada](llada): Contains the code for experiments with LLaDA
-- [mercury-coder](mercury-coder): Contains the code for experiments with InceptionLabs Mercury Coder Small
-- [inpaintARC](inpaintARC): Contains the code for inpainting experiments
 This repository includes three approaches for using masked discrete diffusion language models (MDLMs) for abstraction and reasoning, particularly the ARC-AGI challenge:
 
 1. Pre-trained models
@@ -36,7 +31,3 @@ If you use or reference this code, please cite:
   month={May}
 }
 ```
-
-- The data generation step (`rearc.sbatch`) creates 10,000 examples for each of the 400 ARC problems, which will require significant disk space
-- The `llada_parallel.sbatch` and `llada_sft.sbatch` scripts will utilize GPU resources, so make sure your allocation has sufficient GPU time available
-- Depending on your resource allocation, you may need to adjust the resource requests in the sbatch scripts
