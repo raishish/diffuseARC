@@ -1,0 +1,14 @@
+#conda env python 3.10
+
+# For data_gen
+tqdm
+matplotlib
+numpy
+
+# For LLaDa
+torch
+transformers
+scikit-learn
+wandb
+accelerate
+deepspeed
