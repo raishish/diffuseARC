@@ -1,0 +1,16 @@
+{
+    "unk_token": "<unk>",
+    "sep_token": "<sep>",
+    "pad_token": "<pad>",
+    "mask_token": "<mask>",
+    "eos_token": "<eos>",
+    "additional_special_tokens": [
+        "<arc_sep_example>",
+        "<arc_sep_grid>",
+        "<arc_sep_row>",
+        "<arc_grid_endx>",
+        "<arc_grid_endy>",
+        "<arc_grid_endxy>",
+        "<arc_pad>"
+    ]
+}
