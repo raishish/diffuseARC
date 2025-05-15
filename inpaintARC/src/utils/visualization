@@ -1,0 +1,161 @@
+import numpy as np
+import torch
+
+from src.data.arc_dataset import ARCExample, ARCDataset
+
+
+def visualize_attention(model, input_grid, tokenizer, layer_idx=11, head_idx=0, device='cuda'):
+    """
+    Visualize attention patterns for a given input grid.
+    Enhanced to handle relative position bias.
+
+    Args:
+        model: ARCQwenModel
+        input_grid: Input grid
+        tokenizer: Tokenizer
+        layer_idx: Index of the transformer layer to visualize
+        head_idx: Index of the attention head to visualize
+        device: Device to run on
+
+    Returns:
+        Attention weights for visualization and grid info for reference
+    """
+    model.eval()
+
+    # Create input example with dummy output grid
+    dummy_output = [[0 for _ in range(len(input_grid[0]))] for _ in range(len(input_grid))]
+    example = ARCExample(input_grid=input_grid, output_grid=dummy_output, grid_id=1)
+
+    # Create dataset with single example - extract objects for visualization
+    dataset = ARCDataset([example], tokenizer, extract_objects=True)
+    example_batch = dataset[0]
+
+    # Move to device
+    input_ids = example_batch['input_ids'].unsqueeze(0).to(device)
+    attention_mask = example_batch['attention_mask'].unsqueeze(0).to(device)
+    object_idx = example_batch['object_idx'].unsqueeze(0).to(device) if 'object_idx' in example_batch else None
+    grid_info = {
+        k: v.unsqueeze(0).to(device)
+        for k, v in {
+            'grid_ids': example_batch['grid_ids'],
+            'grid_types': example_batch['grid_types'],
+            'row_positions': example_batch['row_positions'],
+            'col_positions': example_batch['col_positions']
+        }.items()
+    }
+
+    # Hook to capture attention weights
+    attention_weights = []
+
+    def hook_fn(module, input, output):
+        # Extract attention weights from the attention mechanism
+        if isinstance(output, tuple) and len(output) > 1 and output[1] is not None:
+            # For the case where attention weights are returned as second element
+            attention_weights.append(output[1][:, head_idx].detach())
+        elif hasattr(output, 'attentions') and output.attentions is not None:
+            # For the case where attention weights are in an attribute
+            attention_weights.append(output.attentions[layer_idx][:, head_idx].detach())
+
+    # Try to find the appropriate layer to hook
+    # This might vary depending on the specific model implementation
+    if hasattr(model.qwen.transformer.h[layer_idx], 'attn'):
+        hook = model.qwen.transformer.h[layer_idx].attn.register_forward_hook(hook_fn)
+    elif hasattr(model.qwen.transformer.h[layer_idx], 'attention'):
+        hook = model.qwen.transformer.h[layer_idx].attention.register_forward_hook(hook_fn)
+    else:
+        # If we can't find the attention layer directly, try to use output_attentions
+        model.config.output_attentions = True
+        hook = model.register_forward_hook(hook_fn)
+
+    # Forward pass with output_attentions=True
+    with torch.no_grad():
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            grid_info=grid_info,
+            object_idx=object_idx,
+            output_attentions=True
+        )
+
+    # Remove hook
+    hook.remove()
+
+    # Reset output_attentions if we changed it
+    if hasattr(model, 'config'):
+        model.config.output_attentions = False
+
+    # Get attention weights
+    if attention_weights:
+        attn_weight = attention_weights[0].squeeze(0).cpu().numpy()
+    else:
+        # If we couldn't capture weights through hooks, try to get them from outputs
+        if hasattr(outputs, 'attentions') and outputs.attentions is not None:
+            attn_weight = outputs.attentions[layer_idx][0, head_idx].cpu().numpy()
+        else:
+            # Fallback to a dummy tensor if we can't get attention weights
+            print("Warning: Could not retrieve attention weights")
+            attn_weight = np.zeros((input_ids.size(1), input_ids.size(1)))
+
+    return attn_weight, example_batch
+
+
+def visualize_relative_position_bias(model, max_rows=10, max_cols=10):
+    """
+    Visualize the relative position bias for different heads.
+
+    Args:
+        model: ARCQwenModel
+        max_rows: Maximum number of rows to visualize
+        max_cols: Maximum number of columns to visualize
+
+    Returns:
+        Visualization of relative position bias
+    """
+    # Access the relative position bias module
+    rel_pos_bias = model.relative_position_bias
+
+    # Compute bias for a grid of specified size
+    grid_size = max_rows * max_cols
+    bias = rel_pos_bias.compute_bias(grid_size, grid_size)
+
+    # Get the number of attention heads
+    num_heads = bias.size(1)
+
+    # Create a grid of bias values for each head
+    bias_grids = {}
+    for head_idx in range(num_heads):
+        # Extract bias for this head
+        head_bias = bias[0, head_idx].cpu().numpy()
+
+        # Reshape to 2D grid for easier visualization
+        bias_grid = head_bias.reshape(grid_size, grid_size)
+
+        # Store in dictionary
+        bias_grids[f"head_{head_idx}"] = bias_grid
+
+    return bias_grids
+
+
+def visualize_object_embeddings(model, object_ids=range(1, 10), device='cuda'):
+    """
+    Visualize the learned object embeddings.
+
+    Args:
+        model: ARCQwenModel
+        object_ids: List of object IDs to visualize
+        device: Device to run on
+
+    Returns:
+        Object embedding matrix for visualization
+    """
+    if not hasattr(model, 'object_pos_encoder') or not model.config.use_OPE:
+        print("Model does not have object position encoding enabled")
+        return None
+
+    # Get object embeddings
+    object_embeddings = model.object_pos_encoder.obj_embedding.weight.detach().cpu().numpy()
+
+    # Extract embeddings for specified object IDs
+    selected_embeddings = {f"object_{obj_id}": object_embeddings[obj_id] for obj_id in object_ids if obj_id < len(object_embeddings)}
+
+    return selected_embeddings
