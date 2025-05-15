@@ -18,25 +18,37 @@ class ARCTokenizer(PreTrainedTokenizer):
         self.vocab = vocab
         self.model_max_length = model_max_length
 
-        # ARC special tokens
-        arc_special_tokens = [
-            "<arc_sep_example>",
-            "<arc_sep_grid>",
-            "<arc_sep_row>",
-            "<arc_grid_endx>",
-            "<arc_grid_endy>",
-            "<arc_grid_endxy>",
-            "<arc_pad>",
-        ]
-        special_tokens = [
-            "<eos>",
-            "<sep>",    # TODO: is this required?
-            "<pad>",
-            "<unk>",
-            "<mask>"
+        # Define special tokens with AddedToken
+        self.arc_sep_example_token = AddedToken("<arc_sep_example>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_sep_grid_token = AddedToken("<arc_sep_grid>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_sep_row_token = AddedToken("<arc_sep_row>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_grid_endx_token = AddedToken("<arc_grid_endx>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_grid_endy_token = AddedToken("<arc_grid_endy>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_grid_endxy_token = AddedToken("<arc_grid_endxy>", lstrip=False, rstrip=False, single_word=True)
+        self.arc_pad_token = AddedToken("<arc_pad>", lstrip=False, rstrip=False, single_word=True)
+        self.eos_token = AddedToken("<eos>", lstrip=False, rstrip=False, single_word=True)
+        self.sep_token = AddedToken("<sep>", lstrip=False, rstrip=False, single_word=True)
+        self.pad_token = AddedToken("<pad>", lstrip=False, rstrip=False, single_word=True)
+        self.unk_token = AddedToken("<unk>", lstrip=False, rstrip=False, single_word=True)
+        self.mask_token = AddedToken("<mask>", lstrip=True, rstrip=False, single_word=True)
+
+        # Create vocab
+        all_special_tokens = [
+            str(self.arc_sep_example_token),
+            str(self.arc_sep_grid_token),
+            str(self.arc_sep_row_token),
+            str(self.arc_grid_endx_token),
+            str(self.arc_grid_endy_token),
+            str(self.arc_grid_endxy_token),
+            str(self.arc_pad_token),
+            str(self.eos_token),
+            str(self.sep_token),
+            str(self.pad_token),
+            str(self.unk_token),
+            str(self.mask_token),
         ]
 
-        self.vocab.extend(arc_special_tokens + special_tokens)
+        self.vocab.extend(all_special_tokens)
 
         self._vocab_str_to_int = {}
         for id, token in enumerate(self.vocab):
@@ -50,68 +62,24 @@ class ARCTokenizer(PreTrainedTokenizer):
         # "|." at the end adds fallback for characters not matched by vocab tokens
         self._compiled_pattern = re.compile(r"(" + pattern_str + r"|.)")
 
-        arc_sep_example_token = AddedToken("<arc_sep_example>", lstrip=False, rstrip=False, single_word=True)
-        arc_sep_grid_token = AddedToken("<arc_sep_grid>", lstrip=False, rstrip=False, single_word=True)
-        arc_sep_row_token = AddedToken("<arc_sep_row>", lstrip=False, rstrip=False, single_word=True)
-        arc_grid_endx_token = AddedToken("<arc_grid_endx>", lstrip=False, rstrip=False, single_word=True)
-        arc_grid_endy_token = AddedToken("<arc_grid_endy>", lstrip=False, rstrip=False, single_word=True)
-        arc_grid_endxy_token = AddedToken("<arc_grid_endxy>", lstrip=False, rstrip=False, single_word=True)
-        arc_pad_token = AddedToken("<arc_pad>", lstrip=False, rstrip=False, single_word=True)
-
-        eos_token = AddedToken("<eos>", lstrip=False, rstrip=False, single_word=True)
-        sep_token = AddedToken("<sep>", lstrip=False, rstrip=False, single_word=True)
-        pad_token = AddedToken("<pad>", lstrip=False, rstrip=False, single_word=True)
-        unk_token = AddedToken("<unk>", lstrip=False, rstrip=False, single_word=True)
-        mask_token = AddedToken("<mask>", lstrip=True, rstrip=False, single_word=True)
-
-        # super().__init__(
-        #     arc_sep_example_token=arc_sep_example_token,
-        #     arc_sep_grid_token=arc_sep_grid_token,
-        #     arc_sep_row_token=arc_sep_row_token,
-        #     arc_grid_endx_token=arc_grid_endx_token,
-        #     arc_grid_endy_token=arc_grid_endy_token,
-        #     arc_grid_endxy_token=arc_grid_endxy_token,
-        #     arc_pad_token=arc_pad_token,
-        #     eos_token=eos_token,
-        #     sep_token=sep_token,
-        #     pad_token=pad_token,
-        #     mask_token=mask_token,
-        #     unk_token=unk_token,
-        #     add_prefix_space=False,
-        #     model_max_length=model_max_length,
-        #     **kwargs,
-        # )
+        # Initialize with special tokens
         super().__init__(
             add_prefix_space=False,
             model_max_length=model_max_length,
-            extra_special_tokens=arc_special_tokens,
+            arc_sep_example_token=str(self.arc_sep_example_token),
+            arc_sep_grid_token=str(self.arc_sep_grid_token),
+            arc_sep_row_token=str(self.arc_sep_row_token),
+            arc_grid_endx_token=str(self.arc_grid_endx_token),
+            arc_grid_endy_token=str(self.arc_grid_endy_token),
+            arc_grid_endxy_token=str(self.arc_grid_endxy_token),
+            arc_pad_token=str(self.arc_pad_token),
+            eos_token=str(self.eos_token),
+            sep_token=str(self.sep_token),
+            pad_token=str(self.pad_token),
+            mask_token=str(self.mask_token),
+            unk_token=str(self.unk_token),
             **kwargs,
         )
-
-        # Set special tokens as class attributes
-        self.arc_sep_example_token = str(arc_sep_example_token)
-        self.arc_sep_grid_token = str(arc_sep_grid_token)
-        self.arc_sep_row_token = str(arc_sep_row_token)
-        self.arc_grid_endx_token = str(arc_grid_endx_token)
-        self.arc_grid_endy_token = str(arc_grid_endy_token)
-        self.arc_grid_endxy_token = str(arc_grid_endxy_token)
-        self.arc_pad_token = str(arc_pad_token)
-        self.eos_token = str(eos_token)
-        self.sep_token = str(sep_token)
-        self.pad_token = str(pad_token)
-        self.mask_token = str(mask_token)
-        self.unk_token = str(unk_token)
-
-        # Update special tokens
-        self.add_special_tokens({
-            "arc_sep_example": str(arc_sep_example_token),
-            "arc_sep_grid": str(arc_sep_grid_token),
-            "arc_sep_row": str(arc_sep_row_token),
-            "arc_grid_endx": str(arc_grid_endx_token),
-            "arc_grid_endy": str(arc_grid_endy_token),
-            "arc_grid_endxy": str(arc_grid_endxy_token),
-            "arc_pad": str(arc_pad_token),
-        })
 
     @property
     def vocab_size(self) -> int:
@@ -140,11 +108,11 @@ class ARCTokenizer(PreTrainedTokenizer):
         return self._vocab_str_to_int
 
     @classmethod
-    def from_config(cls, config: Dict) -> "ARCTokenizer":
+    def from_config(cls, config: Dict, **kwargs) -> "ARCTokenizer":
         cfg = {}
         cfg["vocab"] = config['vocab']
         cfg["model_max_length"] = config["model_max_length"]
-        return cls(**cfg)
+        return cls(**cfg, **kwargs)
 
     def save_pretrained(self, save_directory: Union[str, os.PathLike], **kwargs):
         cfg_file = Path(save_directory) / "tokenizer_config.json"
@@ -152,9 +120,38 @@ class ARCTokenizer(PreTrainedTokenizer):
         with open(cfg_file, "w") as f:
             json.dump(cfg, f, indent=4)
 
+        # Save special tokens (required by PreTrainedTokenizer)
+        special_tokens_map = {
+            "unk_token": str(self.unk_token),
+            "sep_token": str(self.sep_token),
+            "pad_token": str(self.pad_token),
+            "mask_token": str(self.mask_token),
+            "eos_token": str(self.eos_token),
+            "additional_special_tokens": [
+                str(self.arc_sep_example_token),
+                str(self.arc_sep_grid_token),
+                str(self.arc_sep_row_token),
+                str(self.arc_grid_endx_token),
+                str(self.arc_grid_endy_token),
+                str(self.arc_grid_endxy_token),
+                str(self.arc_pad_token),
+            ],
+        }
+        special_tokens_map_file = Path(save_directory) / "special_tokens_map.json"
+        with open(special_tokens_map_file, "w") as f:
+            json.dump(special_tokens_map, f, indent=4)
+
     @classmethod
     def from_pretrained(cls, save_directory: Union[str, os.PathLike], **kwargs):
         cfg_file = Path(save_directory) / "tokenizer_config.json"
         with open(cfg_file) as f:
             cfg = json.load(f)
+
+        # Load special tokens
+        # special_tokens_map_file = Path(save_directory) / "special_tokens_map.json"
+        # with open(special_tokens_map_file, "r") as f:
+        #     special_tokens_map = json.load(f)
+        #     kwargs.update(special_tokens_map)  # Pass special tokens to __init__
+
+        # return cls.from_config(cfg, **kwargs)
         return cls.from_config(cfg)
