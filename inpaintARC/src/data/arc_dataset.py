@@ -24,6 +24,11 @@ class ARCGrid:
         if not all(isinstance(cell, int) for row in self.grid for cell in row):
             raise ValueError("Grid must contain only integers")
 
+    @property
+    def shape(self):
+        """Get the shape of the grid."""
+        return len(self.grid), len(self.grid[0]) if self.grid else (0, 0)
+
     def pad_grid(
         self, tokenizer: PreTrainedTokenizer, max_rows: int, max_cols: int, mask: bool = False
     ) -> tuple:
@@ -49,33 +54,33 @@ class ARCGrid:
             if mask:
                 padded_grid.append(
                     [tokenizer.mask_token] * rows +
-                    [self.arc_grid_endx_token] +
+                    [tokenizer.arc_grid_endx_token] +
                     [tokenizer.arc_pad_token] * required_padding_cols +
-                    [self.arc_sep_row_token]
+                    [tokenizer.arc_sep_row_token]
                 )
             else:
                 padded_grid.append(
                     row +
-                    [self.arc_grid_endx_token] +
+                    [tokenizer.arc_grid_endx_token] +
                     [tokenizer.arc_pad_token] * required_padding_cols +
-                    [self.arc_sep_row_token]
+                    [tokenizer.arc_sep_row_token]
                 )
 
         # Add column boundary tokens
         padded_grid.append(
-            [self.arc_grid_endy_token] * cols +
-            [self.arc_grid_endxy_token] +
-            [self.arc_grid_endy_token] * required_padding_cols +
-            [self.arc_sep_row_token]
+            [tokenizer.arc_grid_endy_token] * cols +
+            [tokenizer.arc_grid_endxy_token] +
+            [tokenizer.arc_grid_endy_token] * required_padding_cols +
+            [tokenizer.arc_sep_row_token]
         )
 
         # Add padding rows
         for _ in range(required_padding_rows):
             padded_grid.append(
-                [self.arc_pad_token] * cols +
-                [self.arc_grid_endx_token] +
-                [self.arc_pad_token] * required_padding_cols +
-                [self.arc_sep_row_token]
+                [tokenizer.arc_pad_token] * cols +
+                [tokenizer.arc_grid_endx_token] +
+                [tokenizer.arc_pad_token] * required_padding_cols +
+                [tokenizer.arc_sep_row_token]
             )
 
         padded_grid = np.array(padded_grid)
@@ -196,7 +201,7 @@ class ARCExample:
         special_tokens = list(tokenizer.special_tokens_maps.keys())
 
         for row in padded_example:
-            if row[0] == self.arc_pad_token:
+            if row[0] == tokenizer.arc_pad_token:
                 continue
             unpadded_row = [int(cell) for cell in row if cell not in special_tokens]
             unpadded_example.append(unpadded_row)
